@@ -1,7 +1,9 @@
 # goface
 Face Detector based on MTCNN, tensorflow and golang
-Implementation based on https://github.com/davidsandberg/facenet 
-Model file `mtcnn.pb` is converted from `facenet` too (see `scripts/convert.py`. You will need to add `facenet/src` to PYTHONPATH).
+
+Implementation based on https://github.com/davidsandberg/facenet . Tensorflow and the golang binding are required. 
+
+Model file `cmd/mtcnn.pb` is converted from `facenet` too (see `scripts/convert.py`. You will need to add `facenet/src` to PYTHONPATH).
 
 # Usage
 
