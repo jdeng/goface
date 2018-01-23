@@ -13,6 +13,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer det.Close()
 
 	imgFile := flag.String("input", "1.jpg", "input jpeg file")
 	outFile := flag.String("output", "1.png", "output png file")

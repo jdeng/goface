@@ -2,7 +2,7 @@ package goface
 
 import (
 	"io/ioutil"
-	"log"
+	//	"log"
 	"math"
 
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
@@ -145,7 +145,6 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 	//filter
 	reg := output[0].Value().([][]float32)
 	score := output[1].Value().([][]float32)
-
 	total_bbox, total_reg, total_score = filterBbox(total_bbox, reg, score, det.scoreThresholds[1])
 	// log.Println("stage 2, filter bbox: ", len(total_bbox))
 
@@ -260,48 +259,28 @@ func filterBbox(bbox, reg [][]float32, score [][]float32, threshold float32) (nb
 	return
 }
 
-func generateBbox(imap [][][]float32, reg [][][]float32, scale float64, threshold float32) (bbox, oreg [][]float32, score []float32) {
+func generateBbox(imap [][][]float32, reg [][][]float32, scale float64, threshold float32) (bbox, nreg [][]float32, score []float32) {
 	const (
-		stride   = 2.0
-		cellsize = 12.0
+		Stride   = 2.0
+		CellSize = 12.0
 	)
 
 	for i, x := range imap {
 		for j, y := range x {
 			if y[1] > threshold {
-				n := []float32{float32(math.Floor((stride*float64(j)+1.0)/scale + 0.5)),
-					float32(math.Floor((stride*float64(i)+1.0)/scale + 0.5)),
-					float32(math.Floor((stride*float64(j)+1.0+cellsize)/scale + 0.5)),
-					float32(math.Floor((stride*float64(i)+1.0+cellsize)/scale + 0.5)),
+				n := []float32{float32(math.Floor((Stride*float64(j)+1.0)/scale + 0.5)),
+					float32(math.Floor((Stride*float64(i)+1.0)/scale + 0.5)),
+					float32(math.Floor((Stride*float64(j)+1.0+CellSize)/scale + 0.5)),
+					float32(math.Floor((Stride*float64(i)+1.0+CellSize)/scale + 0.5)),
 				}
 				bbox = append(bbox, n)
-				oreg = append(oreg, reg[i][j])
+				nreg = append(nreg, reg[i][j])
 				score = append(score, y[1])
 			}
 		}
 	}
 
 	return
-}
-
-func TensorFromJpeg(bytes []byte) (*tf.Tensor, error) {
-	tensor, err := tf.NewTensor(string(bytes))
-	if err != nil {
-		return nil, err
-	}
-
-	s := op.NewScope()
-	input := op.Placeholder(s, tf.String)
-	out := op.ExpandDims(s,
-		op.Cast(s, op.DecodeJpeg(s, input, op.DecodeJpegChannels(3)), tf.Float),
-		op.Const(s.SubScope("make_batch"), int32(0)))
-
-	outs, err := runScope(s, map[tf.Output]*tf.Tensor{input: tensor}, []tf.Output{out})
-	if err != nil {
-		return nil, err
-	}
-
-	return outs[0], nil
 }
 
 func nms(bbox, reg [][]float32, score []float32, threshold float32) (nbbox, nreg [][]float32, nscore []float32, err error) {
@@ -337,17 +316,17 @@ func cropResizeImage(img *tf.Tensor, bbox [][]float32, size []int32) (*tf.Tensor
 	tbbox, _ := tf.NewTensor(bbox)
 
 	s := op.NewScope()
-	iimg := op.Placeholder(s.SubScope("img"), tf.Float, op.PlaceholderShape(tf.MakeShape(img.Shape()...)))
-	ibbox := op.Placeholder(s.SubScope("bbox"), tf.Float, op.PlaceholderShape(tf.MakeShape(tbbox.Shape()...)))
+	pimg := op.Placeholder(s.SubScope("img"), tf.Float, op.PlaceholderShape(tf.MakeShape(img.Shape()...)))
+	pbbox := op.Placeholder(s.SubScope("bbox"), tf.Float, op.PlaceholderShape(tf.MakeShape(tbbox.Shape()...)))
 	ibidx := op.Const(s.SubScope("bidx"), make([]int32, len(bbox)))
 	isize := op.Const(s.SubScope("size"), size)
 
-	log.Println("cropResize", img.Shape(), ",", tbbox.Shape())
+	//	log.Println("cropResize", img.Shape(), ",", tbbox.Shape())
 
-	out := op.CropAndResize(s, iimg, ibbox, ibidx, isize)
+	out := op.CropAndResize(s, pimg, pbbox, ibidx, isize)
 	out = normalizeImage(s, out)
 
-	outs, err := runScope(s, map[tf.Output]*tf.Tensor{iimg: img, ibbox: tbbox}, []tf.Output{out})
+	outs, err := runScope(s, map[tf.Output]*tf.Tensor{pimg: img, pbbox: tbbox}, []tf.Output{out})
 	if err != nil {
 		return nil, err
 	}
@@ -360,12 +339,12 @@ func resizeImage(img *tf.Tensor, scale float64) (*tf.Tensor, error) {
 	w := int32(math.Ceil(float64(img.Shape()[2]) * scale))
 
 	s := op.NewScope()
-	iimg := op.Placeholder(s, tf.Float, op.PlaceholderShape(tf.MakeShape(img.Shape()...)))
+	pimg := op.Placeholder(s, tf.Float, op.PlaceholderShape(tf.MakeShape(img.Shape()...)))
 
-	out := op.ResizeBilinear(s, iimg, op.Const(s.SubScope("size"), []int32{h, w}))
+	out := op.ResizeBilinear(s, pimg, op.Const(s.SubScope("size"), []int32{h, w}))
 	out = normalizeImage(s, out)
 
-	outs, err := runScope(s, map[tf.Output]*tf.Tensor{iimg: img}, []tf.Output{out})
+	outs, err := runScope(s, map[tf.Output]*tf.Tensor{pimg: img}, []tf.Output{out})
 	if err != nil {
 		return nil, err
 	}
@@ -424,4 +403,24 @@ func scales(h, w float64, factor, minSize float64) []float64 {
 	}
 
 	return scales
+}
+
+func TensorFromJpeg(bytes []byte) (*tf.Tensor, error) {
+	tensor, err := tf.NewTensor(string(bytes))
+	if err != nil {
+		return nil, err
+	}
+
+	s := op.NewScope()
+	input := op.Placeholder(s, tf.String)
+	out := op.ExpandDims(s,
+		op.Cast(s, op.DecodeJpeg(s, input, op.DecodeJpegChannels(3)), tf.Float),
+		op.Const(s.SubScope("make_batch"), int32(0)))
+
+	outs, err := runScope(s, map[tf.Output]*tf.Tensor{input: tensor}, []tf.Output{out})
+	if err != nil {
+		return nil, err
+	}
+
+	return outs[0], nil
 }

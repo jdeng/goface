@@ -19,3 +19,4 @@ See `cmd/detect.go`.
 
 * Not exactly the same (e.g., nms/padding is depending on tensorflow implementation).
 * Not fully tested. Performance could a little bit worse.
+* Face landmark support not implemented.
