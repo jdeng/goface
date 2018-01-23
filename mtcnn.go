@@ -2,7 +2,7 @@ package goface
 
 import (
 	"io/ioutil"
-	//	"log"
+//	"log"
 	"math"
 
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
@@ -76,7 +76,10 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 
 	// stage 1
 	for _, scale := range scales {
-		img, _ := resizeImage(tensor, scale)
+		img, err := resizeImage(tensor, scale)
+		if err != nil {
+			return nil, err
+		}
 		output, err := session.Run(
 			map[tf.Output]*tf.Tensor{
 				graph.Operation("pnet/input").Output(0): img,
@@ -92,8 +95,8 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 
 		// log.Println("pnet:", img.Shape(), "=>", output[0].Shape(), ",", output[1].Shape())
 
-		out0, _ := transpose(output[0], []int64{0, 2, 1, 3})
-		out1, _ := transpose(output[1], []int64{0, 2, 1, 3})
+		out0, _ := transpose(output[0], []int32{0, 2, 1, 3})
+		out1, _ := transpose(output[1], []int32{0, 2, 1, 3})
 
 		xreg := out0.Value().([][][][]float32)[0]
 		xscore := out1.Value().([][][][]float32)[0]
@@ -359,11 +362,11 @@ func resizeImage(img *tf.Tensor, scale float64) (*tf.Tensor, error) {
 func normalizeImage(s *op.Scope, input tf.Output) tf.Output {
 	out := op.Mul(s, op.Sub(s, input, op.Const(s.SubScope("mean"), float32(127.5))),
 		op.Const(s.SubScope("scale"), float32(0.0078125)))
-	out = op.Transpose(s, out, op.Const(s.SubScope("perm"), []int64{0, 2, 1, 3}))
+	out = op.Transpose(s, out, op.Const(s.SubScope("perm"), []int32{0, 2, 1, 3}))
 	return out
 }
 
-func transpose(img *tf.Tensor, perm []int64) (*tf.Tensor, error) {
+func transpose(img *tf.Tensor, perm []int32) (*tf.Tensor, error) {
 	s := op.NewScope()
 	in := op.Placeholder(s, tf.Float, op.PlaceholderShape(tf.MakeShape(-1, -1, -1, -1)))
 	out := op.Transpose(s, in, op.Const(s, perm))
