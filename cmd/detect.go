@@ -9,12 +9,6 @@ import (
 )
 
 func main() {
-	det, err := goface.NewMtcnnDetector("mtcnn.pb")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer det.Close()
-
 	imgFile := flag.String("input", "1.jpg", "input jpeg file")
 	outFile := flag.String("output", "1.png", "output png file")
 	flag.Parse()
@@ -28,6 +22,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	det, err := goface.NewMtcnnDetector("mtcnn.pb")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer det.Close()
+
+	// 0 for default
+	det.Config(0, 0, []float32{0.7, 0.7, 0.9})
 
 	bbox, err := det.DetectFaces(img)
 	if err != nil {

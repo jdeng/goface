@@ -49,7 +49,7 @@ func (det *MtcnnDetector) Close() {
 	}
 }
 
-func (det *MtcnnDetector) Setup(scaleFactor, minSize float64, scoreThresholds []float32) {
+func (det *MtcnnDetector) Config(scaleFactor, minSize float64, scoreThresholds []float32) {
 	if scaleFactor > 0 {
 		det.scaleFactor = scaleFactor
 	}
