@@ -72,7 +72,7 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 	h := float32(tensor.Shape()[1])
 	w := float32(tensor.Shape()[2])
 	scales := scales(float64(h), float64(w), det.scaleFactor, det.minSize)
-	log.Println("scales:", scales)
+	// log.Println("scales:", scales)
 
 	// stage 1
 	for _, scale := range scales {
@@ -90,7 +90,7 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 			return nil, err
 		}
 
-		log.Println("pnet:", img.Shape(), "=>", output[0].Shape(), ",", output[1].Shape())
+		// log.Println("pnet:", img.Shape(), "=>", output[0].Shape(), ",", output[1].Shape())
 
 		xout0, _ := transpose(output[0], []int64{0, 2, 1, 3})
 		xout1, _ := transpose(output[1], []int64{0, 2, 1, 3})
@@ -107,14 +107,14 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 		}
 	}
 
-	log.Println("stage 1 bbox:", len(total_bbox))
+	// log.Println("stage 1 bbox:", len(total_bbox))
 
 	if len(total_bbox) == 0 {
 		return nil, nil
 	}
 
 	total_bbox, total_reg, total_score, err = nms(total_bbox, total_reg, total_score, 0.7)
-	log.Println("stage 1 nms bbox:", len(total_bbox), err)
+	// log.Println("stage 1 nms bbox:", len(total_bbox), err)
 
 	if len(total_bbox) == 0 {
 		return nil, nil
@@ -140,21 +140,21 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 		return nil, err
 	}
 
-	log.Println("rnet:", imgs.Shape(), "=>", output[0].Shape(), ",", output[1].Shape())
+	// log.Println("rnet:", imgs.Shape(), "=>", output[0].Shape(), ",", output[1].Shape())
 
 	//filter
 	reg := output[0].Value().([][]float32)
 	score := output[1].Value().([][]float32)
 
 	total_bbox, total_reg, total_score = filterBbox(total_bbox, reg, score, det.scoreThresholds[1])
-	log.Println("stage 2, filter bbox: ", len(total_bbox))
+	// log.Println("stage 2, filter bbox: ", len(total_bbox))
 
 	if len(total_bbox) == 0 {
 		return nil, nil
 	}
 
 	total_bbox, total_reg, total_score, err = nms(total_bbox, total_reg, total_score, 0.7)
-	log.Println("stage 2, nms bbox: ", len(total_bbox), err)
+	// log.Println("stage 2, nms bbox: ", len(total_bbox), err)
 
 	if len(total_bbox) == 0 {
 		return nil, nil
@@ -181,12 +181,12 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 		return nil, err
 	}
 
-	log.Println("onet:", imgs.Shape(), "=>", output[0].Shape(), ",", output[1].Shape(), ",", output[2].Shape())
+	// log.Println("onet:", imgs.Shape(), "=>", output[0].Shape(), ",", output[1].Shape(), ",", output[2].Shape())
 
 	reg = output[0].Value().([][]float32)
 	score = output[2].Value().([][]float32)
 	total_bbox, total_reg, total_score = filterBbox(total_bbox, reg, score, det.scoreThresholds[2])
-	log.Println("stage 3, filter bbox: ", len(total_bbox))
+	// log.Println("stage 3, filter bbox: ", len(total_bbox))
 
 	if len(total_bbox) == 0 {
 		return nil, nil
@@ -197,7 +197,7 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 	}
 
 	total_bbox, _, total_score, err = nms(total_bbox, total_reg, total_score, 0.7)
-	log.Println("stage 3, nms bbox: ", len(total_bbox), err)
+	// log.Println("stage 3, nms bbox: ", len(total_bbox), err)
 
 	return total_bbox, nil
 }
