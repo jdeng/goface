@@ -30,7 +30,7 @@ func main() {
 	defer det.Close()
 
 	// 0 for default
-	det.Config(0, 0, []float32{0.7, 0.7, 0.9})
+	det.Config(0, 0, []float32{0.7, 0.7, 0.95})
 
 	bbox, err := det.DetectFaces(img)
 	if err != nil {

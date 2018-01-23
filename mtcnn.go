@@ -92,13 +92,17 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 
 		// log.Println("pnet:", img.Shape(), "=>", output[0].Shape(), ",", output[1].Shape())
 
-		xout0, _ := transpose(output[0], []int64{0, 2, 1, 3})
-		xout1, _ := transpose(output[1], []int64{0, 2, 1, 3})
+		out0, _ := transpose(output[0], []int64{0, 2, 1, 3})
+		out1, _ := transpose(output[1], []int64{0, 2, 1, 3})
 
-		out0 := xout0.Value().([][][][]float32)[0]
-		out1 := xout1.Value().([][][][]float32)[0]
+		xreg := out0.Value().([][][][]float32)[0]
+		xscore := out1.Value().([][][][]float32)[0]
 
-		bbox, reg, score := generateBbox(out1, out0, scale, det.scoreThresholds[0])
+		bbox, reg, score := generateBbox(xscore, xreg, scale, det.scoreThresholds[0])
+		if len(bbox) == 0 {
+			continue
+		}
+
 		bbox, reg, score, err = nms(bbox, reg, score, 0.5)
 		if len(bbox) > 0 {
 			total_bbox = append(total_bbox, bbox...)
@@ -288,8 +292,8 @@ func nms(bbox, reg [][]float32, score []float32, threshold float32) (nbbox, nreg
 	tscore, _ := tf.NewTensor(score)
 
 	s := op.NewScope()
-	pbbox := op.Placeholder(s.SubScope("bbox"), tf.Float, op.PlaceholderShape(tf.MakeShape(tbbox.Shape()...)))
-	pscore := op.Placeholder(s.SubScope("score"), tf.Float, op.PlaceholderShape(tf.MakeShape(tscore.Shape()...)))
+	pbbox := op.Placeholder(s.SubScope("bbox"), tf.Float, op.PlaceholderShape(tf.MakeShape(-1, 4)))
+	pscore := op.Placeholder(s.SubScope("score"), tf.Float, op.PlaceholderShape(tf.MakeShape(-1)))
 
 	out := op.NonMaxSuppression(s, pbbox, pscore, op.Const(s.SubScope("max_len"), int32(len(bbox))), op.NonMaxSuppressionIouThreshold(threshold))
 
@@ -316,8 +320,8 @@ func cropResizeImage(img *tf.Tensor, bbox [][]float32, size []int32) (*tf.Tensor
 	tbbox, _ := tf.NewTensor(bbox)
 
 	s := op.NewScope()
-	pimg := op.Placeholder(s.SubScope("img"), tf.Float, op.PlaceholderShape(tf.MakeShape(img.Shape()...)))
-	pbbox := op.Placeholder(s.SubScope("bbox"), tf.Float, op.PlaceholderShape(tf.MakeShape(tbbox.Shape()...)))
+	pimg := op.Placeholder(s.SubScope("img"), tf.Float, op.PlaceholderShape(tf.MakeShape(1, -1, -1, 3)))
+	pbbox := op.Placeholder(s.SubScope("bbox"), tf.Float, op.PlaceholderShape(tf.MakeShape(-1, 4)))
 	ibidx := op.Const(s.SubScope("bidx"), make([]int32, len(bbox)))
 	isize := op.Const(s.SubScope("size"), size)
 
@@ -339,7 +343,7 @@ func resizeImage(img *tf.Tensor, scale float64) (*tf.Tensor, error) {
 	w := int32(math.Ceil(float64(img.Shape()[2]) * scale))
 
 	s := op.NewScope()
-	pimg := op.Placeholder(s, tf.Float, op.PlaceholderShape(tf.MakeShape(img.Shape()...)))
+	pimg := op.Placeholder(s, tf.Float, op.PlaceholderShape(tf.MakeShape(1, -1, -1, 3)))
 
 	out := op.ResizeBilinear(s, pimg, op.Const(s.SubScope("size"), []int32{h, w}))
 	out = normalizeImage(s, out)
@@ -361,7 +365,7 @@ func normalizeImage(s *op.Scope, input tf.Output) tf.Output {
 
 func transpose(img *tf.Tensor, perm []int64) (*tf.Tensor, error) {
 	s := op.NewScope()
-	in := op.Placeholder(s, tf.Float, op.PlaceholderShape(tf.MakeShape(img.Shape()...)))
+	in := op.Placeholder(s, tf.Float, op.PlaceholderShape(tf.MakeShape(-1, -1, -1, -1)))
 	out := op.Transpose(s, in, op.Const(s, perm))
 
 	outs, err := runScope(s, map[tf.Output]*tf.Tensor{in: img}, []tf.Output{out})
