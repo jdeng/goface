@@ -1,5 +1,5 @@
 # goface
-Face Detector based on MTCNN, tensorflow and golang
+Face detector/embeddings based on MTCNN, tensorflow and golang
 
 Implementation based on https://github.com/davidsandberg/facenet . Tensorflow (1.4.1) and the golang binding are required. 
 
@@ -10,15 +10,16 @@ The `facenet` protobuf model file is available for download (see instructions fr
 # Usage
 
 ```
+	// detection
 	bs, err := ioutil.ReadFile(*imgFile)
 	img, err := goface.TensorFromJpeg(bs)
 	det, err := goface.NewMtcnnDetector("mtcnn.pb")
 	bbox, err := det.DetectFaces(img) //[][]float32, i.e., [x1,y1,x2,y2],...
 
-	//embeddings
+	// embeddings
 	mean, std := goface.MeanStd(img)
-	...
     wimg, err := goface.PrewhitenImage(img, mean, std)
+	fn, err := goface.NewFacenet("facenet.pb")
     emb, err := fn.Embedding(wimg)
 ```
 See `cmd/detect.go`. Use `go build` to build the binary and run with `--help`.

@@ -45,7 +45,7 @@ func main() {
 		return
 	}
 
-	var margin float32 = 32.0
+	var margin float32 = 16.0
 	for _, box := range bbox {
 		box[0] -= margin
 		box[1] -= margin
