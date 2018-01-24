@@ -13,7 +13,7 @@ Model file `cmd/mtcnn.pb` is converted from `facenet` too (see `scripts/convert.
 	det, err := goface.NewMtcnnDetector("mtcnn.pb")
 	bbox, err := det.DetectFaces(img) //[][]float32, i.e., [x1,y1,x2,y2],...
 ```
-See `cmd/detect.go`.
+See `cmd/detect.go`. Use `go build` to build the binary and run with `--help`.
 
 # Notes
 
