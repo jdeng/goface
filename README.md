@@ -21,7 +21,7 @@ The `facenet` protobuf model file is available for download (see instructions fr
     wimg, err := goface.PrewhitenImage(img, mean, std)
     emb, err := fn.Embedding(wimg)
 ```
-See `cmd/detect.go`.
+See `cmd/detect.go`. Use `go build` to build the binary and run with `--help`.
 
 # Notes
 
