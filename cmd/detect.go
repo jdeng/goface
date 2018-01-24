@@ -6,11 +6,14 @@ import (
 	"github.com/jdeng/goface"
 	"io/ioutil"
 	"log"
+
+	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
 
 func main() {
 	imgFile := flag.String("input", "1.jpg", "input jpeg file")
 	outFile := flag.String("output", "1.png", "output png file")
+	embedding := flag.Bool("embedding", false, "output embeddings")
 	flag.Parse()
 
 	bs, err := ioutil.ReadFile(*imgFile)
@@ -42,6 +45,14 @@ func main() {
 		return
 	}
 
+	var margin float32 = 32.0
+	for _, box := range bbox {
+		box[0] -= margin
+		box[1] -= margin
+		box[2] += margin
+		box[3] += margin
+	}
+
 	log.Printf("%d faces found in %s\n", len(bbox), *imgFile)
 	im, _ := gg.LoadImage(*imgFile)
 	dc := gg.NewContextForImage(im)
@@ -52,4 +63,43 @@ func main() {
 	dc.Fill()
 	dc.SavePNG(*outFile)
 	log.Printf("result saved to %s\n", *outFile)
+
+	if *embedding {
+		log.Printf("generating embddings for %d faces\n", len(bbox))
+		fn, err := goface.NewFacenet("facenet.pb")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer fn.Close()
+
+		var cropSize int32 = 160
+		ximgs, err := goface.CropResizeImage(img, bbox, []int32{cropSize, cropSize})
+		if err != nil {
+			log.Fatal(err)
+		}
+		imgs := ximgs.Value().([][][][]float32)
+		for _, img := range imgs {
+			mean, std := goface.MeanStd(img)
+
+			timg, err := tf.NewTensor([][][][]float32{img})
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			wimg, err := goface.PrewhitenImage(timg, mean, std)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			emb, err := fn.Embedding(wimg)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			_ = emb
+		}
+	}
 }

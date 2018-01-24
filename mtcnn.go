@@ -2,7 +2,7 @@ package goface
 
 import (
 	"io/ioutil"
-//	"log"
+	//	"log"
 	"math"
 
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
@@ -133,7 +133,7 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 	}
 
 	// stage 2
-	imgs, err := cropResizeImage(tensor, normalizeBbox(total_bbox, w, h), []int32{24, 24})
+	imgs, err := cropResizeImage(tensor, normalizeBbox(total_bbox, w, h), []int32{24, 24}, true)
 	output, err := session.Run(
 		map[tf.Output]*tf.Tensor{
 			graph.Operation("rnet/input").Output(0): imgs,
@@ -172,7 +172,7 @@ func (det *MtcnnDetector) DetectFaces(tensor *tf.Tensor) ([][]float32, error) {
 	}
 
 	// stage 3
-	imgs, err = cropResizeImage(tensor, normalizeBbox(total_bbox, w, h), []int32{48, 48})
+	imgs, err = cropResizeImage(tensor, normalizeBbox(total_bbox, w, h), []int32{48, 48}, true)
 	output, err = session.Run(
 		map[tf.Output]*tf.Tensor{
 			graph.Operation("onet/input").Output(0): imgs,
@@ -319,7 +319,13 @@ func nms(bbox, reg [][]float32, score []float32, threshold float32) (nbbox, nreg
 	return
 }
 
-func cropResizeImage(img *tf.Tensor, bbox [][]float32, size []int32) (*tf.Tensor, error) {
+func CropResizeImage(img *tf.Tensor, bbox [][]float32, size []int32) (*tf.Tensor, error) {
+	h := float32(img.Shape()[1])
+	w := float32(img.Shape()[2])
+	return cropResizeImage(img, normalizeBbox(bbox, w, h), size, false)
+}
+
+func cropResizeImage(img *tf.Tensor, bbox [][]float32, size []int32, normalize bool) (*tf.Tensor, error) {
 	tbbox, _ := tf.NewTensor(bbox)
 
 	s := op.NewScope()
@@ -331,7 +337,9 @@ func cropResizeImage(img *tf.Tensor, bbox [][]float32, size []int32) (*tf.Tensor
 	//	log.Println("cropResize", img.Shape(), ",", tbbox.Shape())
 
 	out := op.CropAndResize(s, pimg, pbbox, ibidx, isize)
-	out = normalizeImage(s, out)
+	if normalize {
+		out = normalizeImage(s, out)
+	}
 
 	outs, err := runScope(s, map[tf.Output]*tf.Tensor{pimg: img, pbbox: tbbox}, []tf.Output{out})
 	if err != nil {
