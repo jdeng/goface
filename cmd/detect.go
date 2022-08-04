@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
-	"github.com/fogleman/gg"
-	"github.com/jdeng/goface"
 	"io/ioutil"
 	"log"
+
+	"github.com/fogleman/gg"
+	"github.com/jdeng/goface"
 
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
@@ -65,7 +66,7 @@ func main() {
 	log.Printf("result saved to %s\n", *outFile)
 
 	if *embedding {
-		log.Printf("generating embddings for %d faces\n", len(bbox))
+		log.Printf("generating embeddings for %d faces\n", len(bbox))
 		fn, err := goface.NewFacenet("facenet.pb")
 		if err != nil {
 			log.Fatal(err)
@@ -98,8 +99,8 @@ func main() {
 				log.Println(err)
 				continue
 			}
+			log.Println((emb))
 
-			_ = emb
 		}
 	}
 }
